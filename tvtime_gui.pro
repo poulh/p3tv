@@ -13,8 +13,10 @@ TEMPLATE = app
 
 
 SOURCES += main.cpp\
-        tvtime.cpp
+        tvtime.cpp \
+    qjsontablemodel.cpp
 
-HEADERS  += tvtime.h
+HEADERS  += tvtime.h \
+    qjsontablemodel.h
 
 FORMS    += tvtime.ui
