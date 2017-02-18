@@ -18,8 +18,10 @@ TVTime::TVTime(QWidget *parent) :
     {
         QJsonTableModel::Header header;
 
-        header.push_back( QJsonTableModel::Heading( { {"title","IMDB ID"}, {"index","imdb_id"} }) );
-        header.push_back( QJsonTableModel::Heading( { {"title","Title"},   {"index","title"} }) );
+
+        header.push_back( QJsonTableModel::Heading( { {"title","Network"},   {"index","network"} }) );
+        header.push_back( QJsonTableModel::Heading( { {"title","Rating"},   {"index","rating"} }) );
+        header.push_back( QJsonTableModel::Heading( { {"title","Title"},   {"index","name"} }) );
 
         searchResults = new QJsonTableModel( header, this );
         ui->searchResultsTableView->setModel( searchResults );
@@ -29,23 +31,27 @@ TVTime::TVTime(QWidget *parent) :
 
     {
         QJsonTableModel::Header header;
-        header.push_back( QJsonTableModel::Heading( { {"title","Title"},   {"index","title"} }) );
+        header.push_back( QJsonTableModel::Heading( { {"title","Rating"},   {"index","rating"} }) );
+        header.push_back( QJsonTableModel::Heading( { {"title","Title"},   {"index","name"} }) );
+
 
         series = new QJsonTableModel( header, this );
         ui->seriesTableView->setModel( series );
         ui->seriesTableView->horizontalHeader()->setStretchLastSection(true);
+        ui->seriesTableView->setSelectionBehavior(QAbstractItemView::SelectRows);
     }
 
     {
         QJsonTableModel::Header header;
-        header.push_back( QJsonTableModel::Heading( { {"title","Title"},    {"index","title"} }) );
-        header.push_back( QJsonTableModel::Heading( { {"title","Season"},   {"index","season"} }) );
-        header.push_back( QJsonTableModel::Heading( { {"title","Episode"},  {"index","episode"} }) );
+        header.push_back( QJsonTableModel::Heading( { {"title","Title"},    {"index","name"} }) );
+        header.push_back( QJsonTableModel::Heading( { {"title","Season"},   {"index","season_number"} }) );
+        header.push_back( QJsonTableModel::Heading( { {"title","Episode"},  {"index","number"} }) );
         header.push_back( QJsonTableModel::Heading( { {"title","Air Date"}, {"index","air_date"} }) );
         header.push_back( QJsonTableModel::Heading( { {"title","Path"},     {"index","path"} }) );
         episodes = new QJsonTableModel( header, this );
         ui->episodeTableView->setModel( episodes );
         ui->episodeTableView->horizontalHeader()->setStretchLastSection(true);
+        ui->episodeTableView->setSelectionBehavior(QAbstractItemView::SelectRows);
     }
 
     connect(ui->searchLineEdit, SIGNAL(returnPressed()),ui->searchButton,SIGNAL(clicked()));
@@ -61,12 +67,15 @@ TVTime::~TVTime()
 
 QJsonDocument TVTime::run_json_command( QStringList command )
 {
+    qDebug() << command;
+
     QProcess process;
     process.start("/usr/local/bin/tvtime_json_api", command);
     process.waitForFinished(-1); // will wait forever until finished
 
     QString stdout = process.readAllStandardOutput();
     qDebug() << stdout;
+    qDebug() << "--------------------";
     return QJsonDocument::fromJson(stdout.toUtf8());
 };
 
@@ -93,11 +102,12 @@ void TVTime::on_searchButton_clicked()
 void TVTime::on_addSeriesButton_clicked()
 {
     QModelIndexList list = ui->searchResultsTableView->selectionModel()->selectedIndexes();
-    foreach( const QModelIndex &item, list )
+    foreach( const QModelIndex &index, list )
     {
+        QJsonObject object = searchResults->getJsonObject( index );
         QStringList args;
         args << "search_and_add";
-        args << item.data().toString();
+        args << object["id"].toString();
         QJsonDocument jsonDocument = run_json_command( args );
     }
     refresh_series();
@@ -107,25 +117,52 @@ void TVTime::on_addSeriesButton_clicked()
 void TVTime::on_deleteSeriesButton_clicked()
 {
     QModelIndexList list = ui->seriesTableView->selectionModel()->selectedIndexes();
-    foreach( const QModelIndex &item, list )
+    foreach( const QModelIndex &index, list )
     {
+        QJsonObject object = series->getJsonObject( index );
         QStringList args;
         args << "remove_series";
-        args << item.data().toString();
+        args << object["id"].toString();
         QJsonDocument jsonDocument = run_json_command( args );
     }
     refresh_series();
 }
 
-void TVTime::on_seriesTableView_clicked(const QModelIndex &index)
+void TVTime::on_seriesTableView_doubleClicked(const QModelIndex &index)
 {
     QJsonObject object = series->getJsonObject( index );
 
 
     QStringList args;
     args << "search_and_list";
-    args << object["title"].toString();
+    args << object["id"].toString();
 
     QJsonDocument jsonDocument = run_json_command( args );
     episodes->setJson( jsonDocument );
+}
+
+void TVTime::on_searchResultsTableView_doubleClicked(const QModelIndex &index)
+{
+    QJsonObject object = searchResults->getJsonObject( index );
+
+    QStringList args;
+    args << "search_and_add";
+    args << object["id"].toString();
+    QJsonDocument jsonDocument = run_json_command( args );
+    refresh_series();
+}
+
+
+void TVTime::on_downloadMissingButton_clicked()
+{
+    QStringList args;
+    args << "download_missing";
+    QJsonDocument jsonDocument = run_json_command( args );
+}
+
+void TVTime::on_catalogDownloadsButton_clicked()
+{
+    QStringList args;
+    args << "catalog_downloads";
+    QJsonDocument jsonDocument = run_json_command( args );
 }
