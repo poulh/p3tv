@@ -32,6 +32,7 @@ TVTime::TVTime(QWidget *parent) :
     {
         QJsonTableModel::Header header;
         header.push_back( QJsonTableModel::Heading( { {"title","Rating"},   {"index","rating"} }) );
+        header.push_back( QJsonTableModel::Heading( { {"title","ID"},   {"index","id"} }) );
         header.push_back( QJsonTableModel::Heading( { {"title","Title"},   {"index","name"} }) );
 
 
@@ -43,11 +44,12 @@ TVTime::TVTime(QWidget *parent) :
 
     {
         QJsonTableModel::Header header;
-        header.push_back( QJsonTableModel::Heading( { {"title","Title"},    {"index","name"} }) );
-        header.push_back( QJsonTableModel::Heading( { {"title","Season"},   {"index","season_number"} }) );
-        header.push_back( QJsonTableModel::Heading( { {"title","Episode"},  {"index","number"} }) );
+        header.push_back( QJsonTableModel::Heading( { {"title","Title"},    {"index","title"} }) );
+        header.push_back( QJsonTableModel::Heading( { {"title","Season"},   {"index","season"} }) );
+        header.push_back( QJsonTableModel::Heading( { {"title","Episode"},  {"index","episode"} }) );
         header.push_back( QJsonTableModel::Heading( { {"title","Air Date"}, {"index","air_date"} }) );
-        header.push_back( QJsonTableModel::Heading( { {"title","Path"},     {"index","path"} }) );
+        header.push_back( QJsonTableModel::Heading( { {"title","Status"},     {"index","status"} }) );
+        header.push_back( QJsonTableModel::Heading( { {"title","% Done"},     {"index","percent_done"} }) );
         episodes = new QJsonTableModel( header, this );
         ui->episodeTableView->setModel( episodes );
         ui->episodeTableView->horizontalHeader()->setStretchLastSection(true);
@@ -71,17 +73,20 @@ QJsonDocument TVTime::run_json_command( QStringList command )
 
     QProcess process;
     process.start("/usr/local/bin/tvtime_json_api", command);
+
     process.waitForFinished(-1); // will wait forever until finished
 
     QString stdout = process.readAllStandardOutput();
+    QString stderr = process.readAllStandardError();
     qDebug() << stdout;
+    qDebug() << stderr;
     qDebug() << "--------------------";
     return QJsonDocument::fromJson(stdout.toUtf8());
 };
 
 void TVTime::refresh_series()
 {
-    series->removeRows(0,series->rowCount());
+ //   series->removeRows(0,series->rowCount());
     QStringList args;
     args << "series";
     QJsonDocument jsonDocument = run_json_command( args );
@@ -128,13 +133,13 @@ void TVTime::on_deleteSeriesButton_clicked()
     refresh_series();
 }
 
-void TVTime::on_seriesTableView_doubleClicked(const QModelIndex &index)
+void TVTime::on_seriesTableView_clicked(const QModelIndex &index)
 {
     QJsonObject object = series->getJsonObject( index );
 
 
     QStringList args;
-    args << "search_and_list";
+    args << "episode_status";
     args << object["id"].toString();
 
     QJsonDocument jsonDocument = run_json_command( args );
@@ -155,14 +160,31 @@ void TVTime::on_searchResultsTableView_doubleClicked(const QModelIndex &index)
 
 void TVTime::on_downloadMissingButton_clicked()
 {
-    QStringList args;
-    args << "download_missing";
-    QJsonDocument jsonDocument = run_json_command( args );
+    QModelIndexList list = ui->seriesTableView->selectionModel()->selectedIndexes();
+    foreach( const QModelIndex &index, list )
+    {
+        QJsonObject object = series->getJsonObject( index );
+
+        QStringList args;
+        args << "download_missing";
+        args << object["id"].toString();
+        QJsonDocument jsonDocument = run_json_command( args );
+        on_seriesTableView_clicked( index ); //refresh episode list
+
+    }
 }
 
 void TVTime::on_catalogDownloadsButton_clicked()
 {
-    QStringList args;
-    args << "catalog_downloads";
-    QJsonDocument jsonDocument = run_json_command( args );
+    QModelIndexList list = ui->seriesTableView->selectionModel()->selectedIndexes();
+    foreach( const QModelIndex &index, list )
+    {
+        QJsonObject object = series->getJsonObject( index );
+
+        QStringList args;
+        args << "catalog_downloads";
+        args << object["id"].toString();
+        QJsonDocument jsonDocument = run_json_command( args );
+        on_seriesTableView_clicked( index ); //refresh episode list
+    }
 }

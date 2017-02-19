@@ -26,7 +26,7 @@ private slots:
 
     void on_deleteSeriesButton_clicked();
 
-    void on_seriesTableView_doubleClicked(const QModelIndex &index);
+    void on_seriesTableView_clicked(const QModelIndex &index);
 
     void on_searchResultsTableView_doubleClicked(const QModelIndex &index);
 
