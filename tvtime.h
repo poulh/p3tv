@@ -5,6 +5,8 @@
 #include <QStringListModel>
 #include <QStandardItemModel>
 #include <QJsonObject>
+#include <QShortcut>
+
 #include "qjsontablemodel.h"
 
 namespace Ui {
@@ -18,6 +20,8 @@ class TVTime : public QMainWindow
 public:
     explicit TVTime(QWidget *parent = 0);
     ~TVTime();
+public slots:
+    void beginSearch();
 
 private slots:
     void on_searchButton_clicked();
@@ -34,6 +38,8 @@ private slots:
 
     void on_seriesTableWidget_clicked(const QModelIndex &index);
 
+    void on_tabWidget_currentChanged(int index);
+
 private:
     QJsonDocument run_json_command( QStringList command );
 
@@ -47,6 +53,7 @@ private:
     QJsonTableModel *searchResults;
 
     QJsonTableModel *episodes;
+
 };
 
 #endif // TVTIME_H

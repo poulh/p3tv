@@ -7,117 +7,168 @@
     <x>0</x>
     <y>0</y>
     <width>1038</width>
-    <height>692</height>
+    <height>632</height>
    </rect>
+  </property>
+  <property name="minimumSize">
+   <size>
+    <width>1038</width>
+    <height>632</height>
+   </size>
+  </property>
+  <property name="maximumSize">
+   <size>
+    <width>1038</width>
+    <height>632</height>
+   </size>
   </property>
   <property name="windowTitle">
    <string>TVTime</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <layout class="QVBoxLayout" name="verticalLayout_2">
+   <layout class="QHBoxLayout" name="horizontalLayout_4">
     <item>
-     <widget class="QTableWidget" name="seriesTableWidget"/>
-    </item>
-    <item>
-     <layout class="QHBoxLayout" name="horizontalLayout_3">
-      <item>
-       <widget class="QSplitter" name="splitter">
-        <property name="orientation">
-         <enum>Qt::Vertical</enum>
-        </property>
-        <widget class="QWidget" name="">
-         <layout class="QVBoxLayout" name="verticalLayout">
+     <widget class="QTabWidget" name="tabWidget">
+      <property name="currentIndex">
+       <number>0</number>
+      </property>
+      <widget class="QWidget" name="browseTab">
+       <attribute name="title">
+        <string>Browse</string>
+       </attribute>
+       <layout class="QHBoxLayout" name="horizontalLayout_3">
+        <item>
+         <layout class="QVBoxLayout" name="verticalLayout_2">
           <item>
-           <layout class="QHBoxLayout" name="horizontalLayout">
+           <widget class="QTableWidget" name="seriesTableWidget">
+            <property name="editTriggers">
+             <set>QAbstractItemView::NoEditTriggers</set>
+            </property>
+            <property name="tabKeyNavigation">
+             <bool>false</bool>
+            </property>
+            <property name="showDropIndicator" stdset="0">
+             <bool>false</bool>
+            </property>
+            <property name="dragDropOverwriteMode">
+             <bool>false</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <widget class="QTableView" name="episodeTableView">
+            <property name="minimumSize">
+             <size>
+              <width>4</width>
+              <height>0</height>
+             </size>
+            </property>
+            <property name="editTriggers">
+             <set>QAbstractItemView::NoEditTriggers</set>
+            </property>
+            <property name="tabKeyNavigation">
+             <bool>false</bool>
+            </property>
+            <property name="showDropIndicator" stdset="0">
+             <bool>false</bool>
+            </property>
+            <property name="dragDropOverwriteMode">
+             <bool>false</bool>
+            </property>
+           </widget>
+          </item>
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_2">
             <item>
-             <widget class="QLineEdit" name="searchLineEdit">
-              <property name="accessibleName">
-               <string/>
+             <widget class="QPushButton" name="deleteSeriesButton">
+              <property name="text">
+               <string>Delete Series</string>
               </property>
              </widget>
             </item>
             <item>
-             <widget class="QPushButton" name="searchButton">
+             <widget class="QPushButton" name="catalogDownloadsButton">
               <property name="text">
-               <string>Search</string>
+               <string>Catalog Downloads</string>
               </property>
-              <property name="autoDefault">
-               <bool>false</bool>
-              </property>
-              <property name="default">
-               <bool>false</bool>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="downloadMissingButton">
+              <property name="text">
+               <string>Download Missing</string>
               </property>
              </widget>
             </item>
            </layout>
           </item>
+         </layout>
+        </item>
+       </layout>
+      </widget>
+      <widget class="QWidget" name="searchTab">
+       <attribute name="title">
+        <string>Search</string>
+       </attribute>
+       <layout class="QVBoxLayout" name="verticalLayout">
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout">
           <item>
-           <widget class="QTableView" name="searchResultsTableView">
-            <property name="maximumSize">
-             <size>
-              <width>16777215</width>
-              <height>192</height>
-             </size>
+           <widget class="QLineEdit" name="searchLineEdit">
+            <property name="accessibleName">
+             <string/>
             </property>
            </widget>
           </item>
           <item>
-           <widget class="QPushButton" name="addSeriesButton">
+           <widget class="QPushButton" name="searchButton">
             <property name="text">
-             <string>Add Series</string>
+             <string>Search</string>
+            </property>
+            <property name="autoDefault">
+             <bool>false</bool>
+            </property>
+            <property name="default">
+             <bool>false</bool>
             </property>
            </widget>
           </item>
          </layout>
-        </widget>
-       </widget>
-      </item>
-      <item>
-       <layout class="QVBoxLayout" name="verticalLayout_3">
+        </item>
         <item>
-         <widget class="QTableView" name="episodeTableView">
-          <property name="minimumSize">
+         <widget class="QTableView" name="searchResultsTableView">
+          <property name="maximumSize">
            <size>
-            <width>4</width>
-            <height>0</height>
+            <width>16777215</width>
+            <height>192</height>
            </size>
+          </property>
+          <property name="editTriggers">
+           <set>QAbstractItemView::NoEditTriggers</set>
+          </property>
+          <property name="tabKeyNavigation">
+           <bool>false</bool>
+          </property>
+          <property name="showDropIndicator" stdset="0">
+           <bool>false</bool>
+          </property>
+          <property name="dragDropOverwriteMode">
+           <bool>false</bool>
           </property>
          </widget>
         </item>
         <item>
-         <layout class="QHBoxLayout" name="horizontalLayout_2">
-          <item>
-           <widget class="QPushButton" name="deleteSeriesButton">
-            <property name="text">
-             <string>Delete Series</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QPushButton" name="catalogDownloadsButton">
-            <property name="text">
-             <string>Catalog Downloads</string>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QPushButton" name="downloadMissingButton">
-            <property name="text">
-             <string>Download Missing</string>
-            </property>
-           </widget>
-          </item>
-         </layout>
+         <widget class="QPushButton" name="addSeriesButton">
+          <property name="text">
+           <string>Add Series</string>
+          </property>
+         </widget>
         </item>
        </layout>
-      </item>
-     </layout>
+      </widget>
+     </widget>
     </item>
    </layout>
-   <zorder>horizontalSpacer</zorder>
-   <zorder>searchResultsTableView</zorder>
-   <zorder>episodeTableView</zorder>
-   <zorder>seriesTableWidget</zorder>
   </widget>
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">
