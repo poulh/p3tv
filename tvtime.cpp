@@ -84,13 +84,21 @@ QJsonDocument TVTime::run_json_command( QStringList command )
     return QJsonDocument::fromJson(stdout.toUtf8());
 };
 
+
+void TVTime::load_settings()
+{
+    QStringList args;
+    args << "settings";
+
+    QJsonDocument jsonDocument = run_json_command( args );
+    settings = jsonDocument.object();
+}
+
 void TVTime::refresh_series()
 {
- //   series->removeRows(0,series->rowCount());
-    QStringList args;
-    args << "series";
-    QJsonDocument jsonDocument = run_json_command( args );
-    series->setJson( jsonDocument );
+    load_settings();
+    QJsonArray array = settings["series"].toArray();
+    series->setJson( array );
 }
 
 
@@ -111,7 +119,7 @@ void TVTime::on_addSeriesButton_clicked()
     {
         QJsonObject object = searchResults->getJsonObject( index );
         QStringList args;
-        args << "search_and_add";
+        args << "add_series";
         args << object["id"].toString();
         QJsonDocument jsonDocument = run_json_command( args );
     }
@@ -144,6 +152,7 @@ void TVTime::on_seriesTableView_clicked(const QModelIndex &index)
 
     QJsonDocument jsonDocument = run_json_command( args );
     episodes->setJson( jsonDocument );
+    ui->episodeTableView->setFocus();
 }
 
 void TVTime::on_searchResultsTableView_doubleClicked(const QModelIndex &index)
@@ -155,6 +164,7 @@ void TVTime::on_searchResultsTableView_doubleClicked(const QModelIndex &index)
     args << object["id"].toString();
     QJsonDocument jsonDocument = run_json_command( args );
     refresh_series();
+    ui->seriesTableView->setFocus();
 }
 
 
@@ -170,7 +180,7 @@ void TVTime::on_downloadMissingButton_clicked()
         args << object["id"].toString();
         QJsonDocument jsonDocument = run_json_command( args );
         on_seriesTableView_clicked( index ); //refresh episode list
-
+        break;
     }
 }
 
@@ -186,5 +196,6 @@ void TVTime::on_catalogDownloadsButton_clicked()
         args << object["id"].toString();
         QJsonDocument jsonDocument = run_json_command( args );
         on_seriesTableView_clicked( index ); //refresh episode list
+        break;
     }
 }

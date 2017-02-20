@@ -4,7 +4,7 @@
 #include <QMainWindow>
 #include <QStringListModel>
 #include <QStandardItemModel>
-#include <QJsonDocument>
+#include <QJsonObject>
 #include "qjsontablemodel.h"
 
 namespace Ui {
@@ -37,12 +37,15 @@ private slots:
 private:
     QJsonDocument run_json_command( QStringList command );
 
+    void load_settings();
     void refresh_series();
 
     Ui::TVTime *ui;
+
+    QJsonObject settings;
+
     QJsonTableModel *searchResults;
     QJsonTableModel *series;
-    //QStandardItemModel *episodes;
     QJsonTableModel *episodes;
 };
 
