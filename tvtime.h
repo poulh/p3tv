@@ -26,13 +26,13 @@ private slots:
 
     void on_deleteSeriesButton_clicked();
 
-    void on_seriesTableView_clicked(const QModelIndex &index);
-
     void on_searchResultsTableView_doubleClicked(const QModelIndex &index);
 
     void on_downloadMissingButton_clicked();
 
     void on_catalogDownloadsButton_clicked();
+
+    void on_seriesTableWidget_clicked(const QModelIndex &index);
 
 private:
     QJsonDocument run_json_command( QStringList command );
@@ -45,7 +45,7 @@ private:
     QJsonObject settings;
 
     QJsonTableModel *searchResults;
-    QJsonTableModel *series;
+
     QJsonTableModel *episodes;
 };
 

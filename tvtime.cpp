@@ -34,12 +34,6 @@ TVTime::TVTime(QWidget *parent) :
         header.push_back( QJsonTableModel::Heading( { {"title","Rating"},   {"index","rating"} }) );
         header.push_back( QJsonTableModel::Heading( { {"title","ID"},   {"index","id"} }) );
         header.push_back( QJsonTableModel::Heading( { {"title","Title"},   {"index","name"} }) );
-
-
-        series = new QJsonTableModel( header, this );
-        ui->seriesTableView->setModel( series );
-        ui->seriesTableView->horizontalHeader()->setStretchLastSection(true);
-        ui->seriesTableView->setSelectionBehavior(QAbstractItemView::SelectRows);
     }
 
     {
@@ -57,6 +51,14 @@ TVTime::TVTime(QWidget *parent) :
     }
 
     connect(ui->searchLineEdit, SIGNAL(returnPressed()),ui->searchButton,SIGNAL(clicked()));
+
+    ui->seriesTableWidget->horizontalHeader()->setVisible(false);
+    ui->seriesTableWidget->verticalHeader()->setVisible(false);
+    ui->seriesTableWidget->setRowCount(5);
+    ui->seriesTableWidget->hideRow(0);
+
+
+    ui->seriesTableWidget->setRowHeight(1,200);
 
     refresh_series();
 }
@@ -98,7 +100,46 @@ void TVTime::refresh_series()
 {
     load_settings();
     QJsonArray array = settings["series"].toArray();
-    series->setJson( array );
+
+
+    ui->seriesTableWidget->setColumnCount( array.size() );
+    uint column = 0;
+    foreach( const QJsonValue& v, array )
+    {
+        QJsonObject theSeries = v.toObject();
+
+        ui->seriesTableWidget->setColumnWidth(column,136);
+
+        QTableWidgetItem* id = new QTableWidgetItem;
+        id->setText( theSeries["id"].toString() );
+        ui->seriesTableWidget->setItem(0,column, id);
+
+        QJsonObject banners = theSeries["banners"].toObject();
+        QString posterPath = banners["poster"].toString();
+        QImage *img = new QImage(posterPath);
+        QTableWidgetItem *thumbnail = new QTableWidgetItem;
+        QString title = theSeries["name"].toString();
+        thumbnail->setToolTip( title );
+        thumbnail->setData(Qt::DecorationRole, QPixmap::fromImage(*img).scaled(136,200) );
+        ui->seriesTableWidget->setItem(1,column,thumbnail);
+
+        QTableWidgetItem* network = new QTableWidgetItem;
+        network->setText( theSeries["network"].toString() );
+        ui->seriesTableWidget->setItem(2,column, network);
+
+
+        QTableWidgetItem* rating = new QTableWidgetItem;
+        rating->setText( QString::number( theSeries["rating"].toDouble() ) );
+        ui->seriesTableWidget->setItem(3,column, rating);
+
+
+        QTableWidgetItem* contentRating = new QTableWidgetItem;
+        contentRating->setText( theSeries["content_rating"].toString() );
+        ui->seriesTableWidget->setItem(4,column, contentRating);
+
+
+        ++column;
+    }
 }
 
 
@@ -122,6 +163,7 @@ void TVTime::on_addSeriesButton_clicked()
         args << "add_series";
         args << object["id"].toString();
         QJsonDocument jsonDocument = run_json_command( args );
+        break;
     }
     refresh_series();
 }
@@ -129,30 +171,18 @@ void TVTime::on_addSeriesButton_clicked()
 
 void TVTime::on_deleteSeriesButton_clicked()
 {
-    QModelIndexList list = ui->seriesTableView->selectionModel()->selectedIndexes();
+    QModelIndexList list = ui->seriesTableWidget->selectionModel()->selectedIndexes();
+
     foreach( const QModelIndex &index, list )
     {
-        QJsonObject object = series->getJsonObject( index );
         QStringList args;
         args << "remove_series";
-        args << object["id"].toString();
+        QString id = ui->seriesTableWidget->item(0, index.column())->text();
+        args << id;
         QJsonDocument jsonDocument = run_json_command( args );
+        break;
     }
-    refresh_series();
-}
-
-void TVTime::on_seriesTableView_clicked(const QModelIndex &index)
-{
-    QJsonObject object = series->getJsonObject( index );
-
-
-    QStringList args;
-    args << "episode_status";
-    args << object["id"].toString();
-
-    QJsonDocument jsonDocument = run_json_command( args );
-    episodes->setJson( jsonDocument );
-    ui->episodeTableView->setFocus();
+   refresh_series();
 }
 
 void TVTime::on_searchResultsTableView_doubleClicked(const QModelIndex &index)
@@ -164,38 +194,56 @@ void TVTime::on_searchResultsTableView_doubleClicked(const QModelIndex &index)
     args << object["id"].toString();
     QJsonDocument jsonDocument = run_json_command( args );
     refresh_series();
-    ui->seriesTableView->setFocus();
+    ui->seriesTableWidget->setFocus();
 }
 
 
 void TVTime::on_downloadMissingButton_clicked()
 {
-    QModelIndexList list = ui->seriesTableView->selectionModel()->selectedIndexes();
+    QModelIndexList list = ui->seriesTableWidget->selectionModel()->selectedIndexes();
+
     foreach( const QModelIndex &index, list )
     {
-        QJsonObject object = series->getJsonObject( index );
-
         QStringList args;
         args << "download_missing";
-        args << object["id"].toString();
+        QString id = ui->seriesTableWidget->item(0, index.column())->text();
+        args << id;
         QJsonDocument jsonDocument = run_json_command( args );
-        on_seriesTableView_clicked( index ); //refresh episode list
+        on_seriesTableWidget_clicked( index ); // refresh episode list
         break;
     }
 }
 
 void TVTime::on_catalogDownloadsButton_clicked()
 {
-    QModelIndexList list = ui->seriesTableView->selectionModel()->selectedIndexes();
+    QModelIndexList list = ui->seriesTableWidget->selectionModel()->selectedIndexes();
+
     foreach( const QModelIndex &index, list )
     {
-        QJsonObject object = series->getJsonObject( index );
-
         QStringList args;
         args << "catalog_downloads";
-        args << object["id"].toString();
+        QString id = ui->seriesTableWidget->item(0, index.column())->text();
+        args << id;
         QJsonDocument jsonDocument = run_json_command( args );
-        on_seriesTableView_clicked( index ); //refresh episode list
+        on_seriesTableWidget_clicked( index ); // refresh episode list
         break;
     }
+}
+
+void TVTime::on_seriesTableWidget_clicked(const QModelIndex &index)
+{
+
+    QString id = ui->seriesTableWidget->item(0,index.column())->text();
+
+    //QJsonObject object = series->getJsonObject( index );
+
+
+    QStringList args;
+    args << "episode_status";
+    args << id;
+
+    QJsonDocument jsonDocument = run_json_command( args );
+    episodes->setJson( jsonDocument );
+    ui->episodeTableView->setFocus();
+
 }
