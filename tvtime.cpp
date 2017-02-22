@@ -48,7 +48,7 @@ TVTime::TVTime(QWidget *parent) :
         ui->episodeTableView->setModel( episodes );
 
 
-        ui->episodeTableView->setColumnWidth(0, this->width() * 0.28 );
+        ui->episodeTableView->setColumnWidth(0, this->width() * 0.44 );
         ui->episodeTableView->setColumnWidth(1, this->width() * 0.1 );
         ui->episodeTableView->setColumnWidth(2, this->width() * 0.1 );
         ui->episodeTableView->setColumnWidth(3, this->width() * 0.1 );
@@ -63,12 +63,11 @@ TVTime::TVTime(QWidget *parent) :
     ui->seriesTableWidget->horizontalHeader()->setVisible(false);
     ui->seriesTableWidget->verticalHeader()->setVisible(false);
 
-    ui->seriesTableWidget->setRowCount(6);
+    ui->seriesTableWidget->setRowCount(5);
     ui->seriesTableWidget->hideRow(0);
-    ui->seriesTableWidget->hideRow(1);
-
+    ui->seriesTableWidget->setSelectionBehavior(QAbstractItemView::SelectColumns);
     // image row
-    ui->seriesTableWidget->setRowHeight(2,200);
+    ui->seriesTableWidget->setRowHeight(1,200);
 
 
     //http://stackoverflow.com/questions/10160232/qt-designer-shortcut-to-another-tab
@@ -81,7 +80,7 @@ TVTime::TVTime(QWidget *parent) :
     m->setMapping(s1, 0);
 
     // Setup the shortcut for the second tab
-    QShortcut *s2 = new QShortcut(QKeySequence("Ctrl+f"), this);
+    QShortcut *s2 = new QShortcut(QKeySequence::Find, this);
     connect(s2, SIGNAL(activated()), m, SLOT(map()));
     m->setMapping(s2, 1);
 
@@ -148,35 +147,30 @@ void TVTime::refresh_series()
 
         QJsonObject banners = theSeries["banners"].toObject();
         QString posterPath = banners["poster"].toString();
-        QTableWidgetItem* imagePath = new QTableWidgetItem;
-        imagePath->setText( posterPath );
-        ui->seriesTableWidget->setItem(1,column,imagePath );
-
-        QImage img(posterPath);
+        QImage *img = new QImage(posterPath);
         QTableWidgetItem *thumbnail = new QTableWidgetItem;
         QString title = theSeries["name"].toString();
         thumbnail->setToolTip( title );
-        thumbnail->setData(Qt::DecorationRole, QPixmap::fromImage(img).scaled(136,200) );
-        ui->seriesTableWidget->setItem(2,column,thumbnail);
+        thumbnail->setData(Qt::DecorationRole, QPixmap::fromImage(*img).scaled(136,200) );
+        ui->seriesTableWidget->setItem(1,column,thumbnail);
 
         QTableWidgetItem* network = new QTableWidgetItem;
         network->setText( theSeries["network"].toString() );
-        ui->seriesTableWidget->setItem(3,column, network);
+        ui->seriesTableWidget->setItem(2,column, network);
 
 
         QTableWidgetItem* rating = new QTableWidgetItem;
         rating->setText( QString::number( theSeries["rating"].toDouble() ) );
-        ui->seriesTableWidget->setItem(4,column, rating);
+        ui->seriesTableWidget->setItem(3,column, rating);
 
 
         QTableWidgetItem* contentRating = new QTableWidgetItem;
         contentRating->setText( theSeries["content_rating"].toString() );
-        ui->seriesTableWidget->setItem(5,column, contentRating);
+        ui->seriesTableWidget->setItem(4,column, contentRating);
 
 
         ++column;
     }
-
     ui->tabWidget->setCurrentIndex(0);
 }
 
@@ -283,11 +277,7 @@ void TVTime::on_seriesTableWidget_clicked(const QModelIndex &index)
 
     QString id = ui->seriesTableWidget->item(0,index.column())->text();
 
-
-    QString posterPath = ui->seriesTableWidget->item(1,index.column())->text();
-    QImage img(posterPath);
-    ui->posterLabel->setPixmap(QPixmap::fromImage(img).scaled(170,250));
-
+    //QJsonObject object = series->getJsonObject( index );
 
 
     QStringList args;
