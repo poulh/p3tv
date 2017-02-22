@@ -45,6 +45,7 @@ private:
 
     void load_settings();
     void refresh_series();
+    void refresh_downloads();
 
     Ui::TVTime *ui;
 
@@ -53,7 +54,7 @@ private:
     QJsonTableModel *searchResults;
 
     QJsonTableModel *episodes;
-
+    QJsonTableModel *downloads;
 };
 
 #endif // TVTIME_H

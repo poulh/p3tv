@@ -31,13 +31,6 @@ TVTime::TVTime(QWidget *parent) :
 
     {
         QJsonTableModel::Header header;
-        header.push_back( QJsonTableModel::Heading( { {"title","Rating"},   {"index","rating"} }) );
-        header.push_back( QJsonTableModel::Heading( { {"title","ID"},   {"index","id"} }) );
-        header.push_back( QJsonTableModel::Heading( { {"title","Title"},   {"index","name"} }) );
-    }
-
-    {
-        QJsonTableModel::Header header;
         header.push_back( QJsonTableModel::Heading( { {"title","Title"},    {"index","title"} }) );
         header.push_back( QJsonTableModel::Heading( { {"title","Season"},   {"index","season"} }) );
         header.push_back( QJsonTableModel::Heading( { {"title","Episode"},  {"index","episode"} }) );
@@ -57,6 +50,22 @@ TVTime::TVTime(QWidget *parent) :
     //    ui->episodeTableView->horizontalHeader()->setStretchLastSection(true);
         ui->episodeTableView->setSelectionBehavior(QAbstractItemView::SelectRows);
     }
+
+    {
+        QJsonTableModel::Header header;
+        header.push_back( QJsonTableModel::Heading( { {"title","Series"},    {"index","series"} }) );
+        header.push_back( QJsonTableModel::Heading( { {"title","Season"},   {"index","season"} }) );
+        header.push_back( QJsonTableModel::Heading( { {"title","Episode"},  {"index","episode"} }) );
+        header.push_back( QJsonTableModel::Heading( { {"title","Status"},     {"index","status"} }) );
+        header.push_back( QJsonTableModel::Heading( { {"title","% Done"},     {"index","percent_done"} }) );
+        header.push_back( QJsonTableModel::Heading( { {"title","Path"},      {"index","path"} }) );
+        downloads = new QJsonTableModel( header, this );
+        ui->downloadsTableView->setModel( downloads );
+        ui->downloadsTableView->horizontalHeader()->setStretchLastSection(true);
+
+        ui->downloadsTableView->setSelectionBehavior(QAbstractItemView::SelectRows);
+    }
+
 
     connect(ui->searchLineEdit, SIGNAL(returnPressed()),ui->searchButton,SIGNAL(clicked()));
 
@@ -174,6 +183,18 @@ void TVTime::refresh_series()
     ui->tabWidget->setCurrentIndex(0);
 }
 
+void TVTime::refresh_downloads()
+{
+
+    QStringList args;
+    args << "downloads";
+
+
+    QJsonDocument jsonDocument = run_json_command( args );
+    downloads->setJson( jsonDocument );
+    //ui->episodeTableView->setFocus();
+}
+
 
 void TVTime::on_searchButton_clicked()
 {
@@ -264,7 +285,7 @@ void TVTime::on_catalogDownloadsButton_clicked()
 
     QModelIndex index = list[0];
     QStringList args;
-    args << "catalog_downloads";
+    args << "catalog_downloads_for_series";
     QString id = ui->seriesTableWidget->item(0, index.column())->text();
     args << id;
     QJsonDocument jsonDocument = run_json_command( args );
@@ -292,10 +313,15 @@ void TVTime::on_seriesTableWidget_clicked(const QModelIndex &index)
 
 void TVTime::on_tabWidget_currentChanged(int index)
 {
-    if( index == 1 )
+    switch( index )
     {
+    case 1:
+        refresh_downloads();
+        break;
+    case 2:
         ui->searchLineEdit->setFocus();
         ui->searchLineEdit->selectAll();
+        break;
     }
 }
 
