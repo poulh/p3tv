@@ -55,6 +55,8 @@ private:
 
     QJsonTableModel *episodes;
     QJsonTableModel *downloads;
+
+    QJsonObject seriesMap;
 };
 
 #endif // TVTIME_H

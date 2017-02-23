@@ -30,7 +30,7 @@
     <item>
      <widget class="QTabWidget" name="tabWidget">
       <property name="currentIndex">
-       <number>0</number>
+       <number>1</number>
       </property>
       <widget class="QWidget" name="browseTab">
        <attribute name="title">
@@ -137,7 +137,7 @@
        </attribute>
        <layout class="QHBoxLayout" name="horizontalLayout_5">
         <item>
-         <widget class="QTableView" name="downloadsTableView"/>
+         <widget class="QTableWidget" name="downloadsTableWidget"/>
         </item>
        </layout>
       </widget>

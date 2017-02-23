@@ -7,7 +7,7 @@
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QSignalMapper>
-
+#include <QProgressBar>
 
 TVTime::TVTime(QWidget *parent) :
     QMainWindow(parent),
@@ -52,18 +52,14 @@ TVTime::TVTime(QWidget *parent) :
     }
 
     {
-        QJsonTableModel::Header header;
-        header.push_back( QJsonTableModel::Heading( { {"title","Series"},    {"index","series"} }) );
-        header.push_back( QJsonTableModel::Heading( { {"title","Season"},   {"index","season"} }) );
-        header.push_back( QJsonTableModel::Heading( { {"title","Episode"},  {"index","episode"} }) );
-        header.push_back( QJsonTableModel::Heading( { {"title","Status"},     {"index","status"} }) );
-        header.push_back( QJsonTableModel::Heading( { {"title","% Done"},     {"index","percent_done"} }) );
-        header.push_back( QJsonTableModel::Heading( { {"title","Path"},      {"index","path"} }) );
-        downloads = new QJsonTableModel( header, this );
-        ui->downloadsTableView->setModel( downloads );
-        ui->downloadsTableView->horizontalHeader()->setStretchLastSection(true);
 
-        ui->downloadsTableView->setSelectionBehavior(QAbstractItemView::SelectRows);
+
+        ui->downloadsTableWidget->setColumnCount(2);
+        ui->downloadsTableWidget->setColumnWidth(0, 68);
+        ui->downloadsTableWidget->horizontalHeader()->setVisible(false);
+        ui->downloadsTableWidget->verticalHeader()->setVisible(false);
+        ui->downloadsTableWidget->horizontalHeader()->setStretchLastSection(true);
+        ui->downloadsTableWidget->setSelectionMode(QAbstractItemView::NoSelection);
     }
 
 
@@ -72,11 +68,10 @@ TVTime::TVTime(QWidget *parent) :
     ui->seriesTableWidget->horizontalHeader()->setVisible(false);
     ui->seriesTableWidget->verticalHeader()->setVisible(false);
 
-    ui->seriesTableWidget->setRowCount(5);
-    ui->seriesTableWidget->hideRow(0);
+    ui->seriesTableWidget->setRowCount(4);
     ui->seriesTableWidget->setSelectionBehavior(QAbstractItemView::SelectColumns);
     // image row
-    ui->seriesTableWidget->setRowHeight(1,200);
+    ui->seriesTableWidget->setRowHeight(0,200);
 
 
     //http://stackoverflow.com/questions/10160232/qt-designer-shortcut-to-another-tab
@@ -84,14 +79,18 @@ TVTime::TVTime(QWidget *parent) :
     QSignalMapper *m = new QSignalMapper(this);
 
     // Setup the shortcut for the first tab
-    QShortcut *s1 = new QShortcut(QKeySequence("Ctrl+b"), this);
+    QShortcut *s0 = new QShortcut(QKeySequence("Ctrl+b"), this);
+    connect(s0, SIGNAL(activated()), m, SLOT(map()));
+    m->setMapping(s0, 0);
+
+    QShortcut *s1 = new QShortcut(QKeySequence("Ctrl+d"), this);
     connect(s1, SIGNAL(activated()), m, SLOT(map()));
-    m->setMapping(s1, 0);
+    m->setMapping(s1, 1);
 
     // Setup the shortcut for the second tab
     QShortcut *s2 = new QShortcut(QKeySequence::Find, this);
     connect(s2, SIGNAL(activated()), m, SLOT(map()));
-    m->setMapping(s2, 1);
+    m->setMapping(s2, 2);
 
     // Wire the signal mapper to the tab widget index change slot
     connect(m, SIGNAL(mapped(int)), ui->tabWidget, SLOT(setCurrentIndex(int)));
@@ -133,6 +132,13 @@ void TVTime::load_settings()
 
     QJsonDocument jsonDocument = run_json_command( args );
     settings = jsonDocument.object();
+
+    foreach( const QJsonValue& value, settings["series"].toArray() )
+    {
+        QJsonObject theSeries = value.toObject();
+        seriesMap.insert( theSeries["id"].toString() , value );
+
+    }
 }
 
 void TVTime::refresh_series()
@@ -142,7 +148,6 @@ void TVTime::refresh_series()
 
 
     ui->seriesTableWidget->setColumnCount( array.size() );
-    //ui->seriesTableWidget->verticalHeader()->setSelectionBehavior(QAbstractItemView::SelectColumns);
     uint column = 0;
     foreach( const QJsonValue& v, array )
     {
@@ -150,32 +155,27 @@ void TVTime::refresh_series()
 
         ui->seriesTableWidget->setColumnWidth(column,136);
 
-        QTableWidgetItem* id = new QTableWidgetItem;
-        id->setText( theSeries["id"].toString() );
-        ui->seriesTableWidget->setItem(0,column, id);
-
         QJsonObject banners = theSeries["banners"].toObject();
         QString posterPath = banners["poster"].toString();
-        QImage *img = new QImage(posterPath);
-        QTableWidgetItem *thumbnail = new QTableWidgetItem;
+        QImage img(posterPath); QTableWidgetItem *thumbnail = new QTableWidgetItem;
         QString title = theSeries["name"].toString();
         thumbnail->setToolTip( title );
-        thumbnail->setData(Qt::DecorationRole, QPixmap::fromImage(*img).scaled(136,200) );
-        ui->seriesTableWidget->setItem(1,column,thumbnail);
+        thumbnail->setData(Qt::DecorationRole, QPixmap::fromImage( img ).scaled(136,200) );
+        ui->seriesTableWidget->setItem(0,column,thumbnail);
 
         QTableWidgetItem* network = new QTableWidgetItem;
         network->setText( theSeries["network"].toString() );
-        ui->seriesTableWidget->setItem(2,column, network);
+        ui->seriesTableWidget->setItem(1,column, network);
 
 
         QTableWidgetItem* rating = new QTableWidgetItem;
         rating->setText( QString::number( theSeries["rating"].toDouble() ) );
-        ui->seriesTableWidget->setItem(3,column, rating);
+        ui->seriesTableWidget->setItem(2,column, rating);
 
 
         QTableWidgetItem* contentRating = new QTableWidgetItem;
         contentRating->setText( theSeries["content_rating"].toString() );
-        ui->seriesTableWidget->setItem(4,column, contentRating);
+        ui->seriesTableWidget->setItem(3,column, contentRating);
 
 
         ++column;
@@ -185,14 +185,63 @@ void TVTime::refresh_series()
 
 void TVTime::refresh_downloads()
 {
-
     QStringList args;
-    args << "downloads";
-
+    args << "catalog_and_downloads";
 
     QJsonDocument jsonDocument = run_json_command( args );
-    downloads->setJson( jsonDocument );
-    //ui->episodeTableView->setFocus();
+
+    QJsonArray downloads = jsonDocument.array();
+    ui->downloadsTableWidget->setRowCount( downloads.size() );
+    uint row = 0;
+    foreach( const QJsonValue& value, downloads )
+    {
+
+        QJsonObject download = value.toObject();
+        QJsonObject theSeries = seriesMap[ download["series_id"].toString() ].toObject();
+        QJsonObject banners = theSeries["banners"].toObject();
+        QString posterPath = banners["poster"].toString();
+
+        ui->downloadsTableWidget->setRowHeight(row,100);
+
+        QImage img(posterPath); QTableWidgetItem *thumbnail = new QTableWidgetItem;
+
+        thumbnail->setToolTip( download["series"].toString() );
+        thumbnail->setData(Qt::DecorationRole, QPixmap::fromImage( img ).scaled(68,100) );
+        ui->downloadsTableWidget->setItem(row,0,thumbnail);
+
+
+        QTableWidget *progressTable = new QTableWidget(2,1);
+        progressTable->setSelectionMode(QAbstractItemView::NoSelection);
+        progressTable->horizontalHeader()->setVisible(false);
+        progressTable->verticalHeader()->setVisible(false);
+        progressTable->horizontalHeader()->setStretchLastSection(true);
+        progressTable->setRowHeight(0,50-2);
+        progressTable->setRowHeight(1,50-2);
+
+        QTableWidgetItem* progressHeader = new QTableWidgetItem;
+        QString header = download["series"].toString();
+        header += " - S" + QString::number( download["season"].toDouble() ).rightJustified(2,'0');
+        header += "E" + QString::number( download["episode"].toDouble() ).rightJustified(2,'0');
+        header += " - " + download["path"].toString();
+        progressHeader->setText( header );
+
+        QProgressBar *progress = new QProgressBar();
+        progress->setRange(0,1000);
+        progress->setFormat("%v%");
+        progress->setTextVisible( true );
+        progress->setValue( download["percent_done"].toDouble() * 1000 );
+
+        progressTable->setItem( 0, 0, progressHeader );
+        progressTable->setCellWidget( 1, 0, progress );
+
+        ui->downloadsTableWidget->setCellWidget(row,1, progressTable);
+
+
+
+        ++row;
+
+    }
+
 }
 
 
@@ -295,11 +344,9 @@ void TVTime::on_catalogDownloadsButton_clicked()
 
 void TVTime::on_seriesTableWidget_clicked(const QModelIndex &index)
 {
-
-    QString id = ui->seriesTableWidget->item(0,index.column())->text();
-
-    //QJsonObject object = series->getJsonObject( index );
-
+    QJsonArray series = settings["series"].toArray();
+    QJsonObject selectedSeries = series[ index.column() ].toObject();
+    QString id = selectedSeries["id"].toString();
 
     QStringList args;
     args << "episode_status";
