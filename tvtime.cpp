@@ -27,6 +27,8 @@ TVTime::TVTime(QWidget *parent) :
         ui->searchResultsTableView->setModel( searchResults );
         ui->searchResultsTableView->horizontalHeader()->setStretchLastSection(true);
         ui->searchResultsTableView->setSelectionBehavior(QAbstractItemView::SelectRows);
+
+        connect(ui->searchLineEdit, SIGNAL(returnPressed()),ui->searchButton,SIGNAL(clicked()));
     }
 
     {
@@ -63,7 +65,7 @@ TVTime::TVTime(QWidget *parent) :
     }
 
 
-    connect(ui->searchLineEdit, SIGNAL(returnPressed()),ui->searchButton,SIGNAL(clicked()));
+
 
     ui->seriesTableWidget->horizontalHeader()->setVisible(false);
     ui->seriesTableWidget->verticalHeader()->setVisible(false);
@@ -73,6 +75,10 @@ TVTime::TVTime(QWidget *parent) :
     // image row
     ui->seriesTableWidget->setRowHeight(0,200);
 
+    qDebug() << "timer";
+    downloadTimer = new QTimer( this );
+    connect( downloadTimer, SIGNAL( timeout() ), this, SLOT( refresh_downloads() ) );
+    downloadTimer->start(10000);
 
     //http://stackoverflow.com/questions/10160232/qt-designer-shortcut-to-another-tab
     // Setup a signal mapper to avoid creating custom slots for each tab
@@ -185,6 +191,10 @@ void TVTime::refresh_series()
 
 void TVTime::refresh_downloads()
 {
+    if( ui->tabWidget->currentIndex() != 1 )
+    {
+        return;
+    }
     QStringList args;
     args << "catalog_and_downloads";
 
@@ -315,9 +325,13 @@ void TVTime::on_downloadMissingButton_clicked()
     }
 
     QModelIndex index = list[0];
+    QJsonArray series = settings["series"].toArray();
+    QJsonObject selectedSeries = series[ index.column() ].toObject();
+    QString id = selectedSeries["id"].toString();
+
+
     QStringList args;
     args << "download_missing";
-    QString id = ui->seriesTableWidget->item(0, index.column())->text();
     args << id;
     QJsonDocument jsonDocument = run_json_command( args );
 
@@ -333,9 +347,12 @@ void TVTime::on_catalogDownloadsButton_clicked()
     }
 
     QModelIndex index = list[0];
+    QJsonArray series = settings["series"].toArray();
+    QJsonObject selectedSeries = series[ index.column() ].toObject();
+    QString id = selectedSeries["id"].toString();
+
     QStringList args;
     args << "catalog_downloads_for_series";
-    QString id = ui->seriesTableWidget->item(0, index.column())->text();
     args << id;
     QJsonDocument jsonDocument = run_json_command( args );
 

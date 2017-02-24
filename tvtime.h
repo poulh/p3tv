@@ -6,6 +6,7 @@
 #include <QStandardItemModel>
 #include <QJsonObject>
 #include <QShortcut>
+#include <QTimer>
 
 #include "qjsontablemodel.h"
 
@@ -40,12 +41,13 @@ private slots:
 
     void on_tabWidget_currentChanged(int index);
 
+    void refresh_downloads();
 private:
     QJsonDocument run_json_command( QStringList command );
 
     void load_settings();
     void refresh_series();
-    void refresh_downloads();
+
 
     Ui::TVTime *ui;
 
@@ -57,6 +59,7 @@ private:
     QJsonTableModel *downloads;
 
     QJsonObject seriesMap;
+    QTimer *downloadTimer;
 };
 
 #endif // TVTIME_H
