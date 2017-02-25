@@ -44,9 +44,10 @@ private slots:
     void refresh_downloads();
 private:
     QJsonDocument run_json_command( QStringList command );
-
+    void add_series( const QString& id );
+    void download_missing( const QString& id );
     void load_settings();
-    void refresh_series();
+    void refresh_series( const QString& seriesid );
 
 
     Ui::TVTime *ui;

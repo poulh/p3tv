@@ -100,8 +100,8 @@ TVTime::TVTime(QWidget *parent) :
     // Wire the signal mapper to the tab widget index change slot
     connect(m, SIGNAL(mapped(int)), ui->tabWidget, SLOT(setCurrentIndex(int)));
 
-
-    refresh_series();
+    refresh_series( "" );
+    refresh_downloads();
 }
 
 TVTime::~TVTime()
@@ -146,7 +146,7 @@ void TVTime::load_settings()
     }
 }
 
-void TVTime::refresh_series()
+void TVTime::refresh_series(const QString &seriesid )
 {
     load_settings();
     QJsonArray array = settings["series"].toArray();
@@ -182,18 +182,18 @@ void TVTime::refresh_series()
         contentRating->setText( theSeries["content_rating"].toString() );
         ui->seriesTableWidget->setItem(3,column, contentRating);
 
+        if( theSeries["id"].toString() == seriesid )
+        {
+            ui->seriesTableWidget->selectColumn( column );
+        }
+
 
         ++column;
     }
-    ui->tabWidget->setCurrentIndex(0);
 }
 
 void TVTime::refresh_downloads()
 {
-    if( ui->tabWidget->currentIndex() != 1 )
-    {
-        return;
-    }
     QStringList args;
     args << "catalog_and_downloads";
 
@@ -201,6 +201,16 @@ void TVTime::refresh_downloads()
 
     QJsonArray downloads = jsonDocument.array();
     ui->downloadsTableWidget->setRowCount( downloads.size() );
+
+    if( downloads.size() > 0 )
+    {
+        ui->tabWidget->setTabText( 1, "Downloads ( " + QString::number( downloads.size()) + " )" );
+    }
+    else
+    {
+        ui->tabWidget->setTabText( 1, "Downloads" );
+    }
+
     uint row = 0;
     foreach( const QJsonValue& value, downloads )
     {
@@ -276,13 +286,15 @@ void TVTime::on_addSeriesButton_clicked()
     }
 
     QModelIndex index = list[0];
-    QJsonObject object = searchResults->getJsonObject( index );
+    on_searchResultsTableView_doubleClicked( index ); //add series and refresh e
+}
+
+void TVTime::add_series( const QString& id )
+{
     QStringList args;
     args << "add_series";
-    args << object["id"].toString();
+    args << id;
     QJsonDocument jsonDocument = run_json_command( args );
-
-    refresh_series();
 }
 
 
@@ -304,18 +316,20 @@ void TVTime::on_deleteSeriesButton_clicked()
     args << "remove_series";
     args << id;
     QJsonDocument jsonDocument = run_json_command( args );
-    refresh_series();
+
+    QJsonObject nextSeries = series[ std::min( index.column(), series.size() -2 ) ].toObject();
+    refresh_series( nextSeries["id"].toString() );
 }
 
 void TVTime::on_searchResultsTableView_doubleClicked(const QModelIndex &index)
 {
     QJsonObject object = searchResults->getJsonObject( index );
-
-    QStringList args;
-    args << "add_series";
-    args << object["id"].toString();
-    QJsonDocument jsonDocument = run_json_command( args );
-    refresh_series();
+    QString id = object["id"].toString();
+    add_series( id);
+    download_missing( id );
+    refresh_downloads();
+    refresh_series( id );
+    ui->tabWidget->setCurrentIndex(0);
 }
 
 
@@ -332,13 +346,17 @@ void TVTime::on_downloadMissingButton_clicked()
     QJsonObject selectedSeries = series[ index.column() ].toObject();
     QString id = selectedSeries["id"].toString();
 
+    download_missing( id );
 
+    on_seriesTableWidget_clicked( index ); // refresh episode list
+}
+
+void TVTime::download_missing( const QString& id )
+{
     QStringList args;
     args << "download_missing";
     args << id;
     QJsonDocument jsonDocument = run_json_command( args );
-
-    on_seriesTableWidget_clicked( index ); // refresh episode list
 }
 
 void TVTime::on_catalogDownloadsButton_clicked()
@@ -380,15 +398,19 @@ void TVTime::on_seriesTableWidget_clicked(const QModelIndex &index)
 
 void TVTime::on_tabWidget_currentChanged(int index)
 {
-    switch( index )
+    QString tabName = ui->tabWidget->tabText( index );
+    if( tabName == "Search" )
     {
-    case 1:
-        refresh_downloads();
-        break;
-    case 2:
         ui->searchLineEdit->setFocus();
         ui->searchLineEdit->selectAll();
-        break;
+    }
+    else if( tabName == "Browse")
+    {
+
+    }
+    else // Downloads
+    {
+        //refresh_downloads();
     }
 }
 
