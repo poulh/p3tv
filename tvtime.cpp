@@ -75,7 +75,6 @@ TVTime::TVTime(QWidget *parent) :
     // image row
     ui->seriesTableWidget->setRowHeight(0,200);
 
-    qDebug() << "timer";
     downloadTimer = new QTimer( this );
     connect( downloadTimer, SIGNAL( timeout() ), this, SLOT( refresh_downloads() ) );
     downloadTimer->start(10000);
@@ -291,16 +290,21 @@ void TVTime::on_deleteSeriesButton_clicked()
 {
     QModelIndexList list = ui->seriesTableWidget->selectionModel()->selectedIndexes();
 
-    foreach( const QModelIndex &index, list )
+    if( list.empty() )
     {
-        QStringList args;
-        args << "remove_series";
-        QString id = ui->seriesTableWidget->item(0, index.column())->text();
-        args << id;
-        QJsonDocument jsonDocument = run_json_command( args );
-        break;
+        return;
     }
-   refresh_series();
+
+    QModelIndex index = list[0];
+    QJsonArray series = settings["series"].toArray();
+    QJsonObject selectedSeries = series[ index.column() ].toObject();
+    QString id = selectedSeries["id"].toString();
+
+    QStringList args;
+    args << "remove_series";
+    args << id;
+    QJsonDocument jsonDocument = run_json_command( args );
+    refresh_series();
 }
 
 void TVTime::on_searchResultsTableView_doubleClicked(const QModelIndex &index)
@@ -312,7 +316,6 @@ void TVTime::on_searchResultsTableView_doubleClicked(const QModelIndex &index)
     args << object["id"].toString();
     QJsonDocument jsonDocument = run_json_command( args );
     refresh_series();
-
 }
 
 
