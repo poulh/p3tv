@@ -48,6 +48,7 @@ private:
     void download_missing( const QString& id );
     void load_settings();
     void refresh_series( const QString& seriesid );
+    void refresh_episodes( const QString& id );
 
 
     Ui::TVTime *ui;

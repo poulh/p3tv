@@ -185,6 +185,7 @@ void TVTime::refresh_series(const QString &seriesid )
         if( theSeries["id"].toString() == seriesid )
         {
             ui->seriesTableWidget->selectColumn( column );
+            refresh_episodes( seriesid );
         }
 
 
@@ -348,7 +349,7 @@ void TVTime::on_downloadMissingButton_clicked()
 
     download_missing( id );
 
-    on_seriesTableWidget_clicked( index ); // refresh episode list
+    refresh_series( id );
 }
 
 void TVTime::download_missing( const QString& id )
@@ -377,7 +378,7 @@ void TVTime::on_catalogDownloadsButton_clicked()
     args << id;
     QJsonDocument jsonDocument = run_json_command( args );
 
-    on_seriesTableWidget_clicked( index ); // refresh episode list
+    refresh_series( id );
 }
 
 void TVTime::on_seriesTableWidget_clicked(const QModelIndex &index)
@@ -386,14 +387,18 @@ void TVTime::on_seriesTableWidget_clicked(const QModelIndex &index)
     QJsonObject selectedSeries = series[ index.column() ].toObject();
     QString id = selectedSeries["id"].toString();
 
+    refresh_episodes( id );
+}
+
+void TVTime::refresh_episodes( const QString& id )
+{
     QStringList args;
     args << "episode_status";
     args << id;
 
     QJsonDocument jsonDocument = run_json_command( args );
     episodes->setJson( jsonDocument );
-    ui->episodeTableView->setFocus();
-
+    //ui->episodeTableView->setFocus();
 }
 
 void TVTime::on_tabWidget_currentChanged(int index)
