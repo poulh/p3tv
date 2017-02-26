@@ -215,7 +215,6 @@ void TVTime::refresh_downloads()
     uint row = 0;
     foreach( const QJsonValue& value, downloads )
     {
-
         QJsonObject download = value.toObject();
         QJsonObject theSeries = seriesMap[ download["series_id"].toString() ].toObject();
         QJsonObject banners = theSeries["banners"].toObject();
@@ -256,12 +255,8 @@ void TVTime::refresh_downloads()
 
         ui->downloadsTableWidget->setCellWidget(row,1, progressTable);
 
-
-
         ++row;
-
     }
-
 }
 
 
@@ -398,7 +393,7 @@ void TVTime::refresh_episodes( const QString& id )
 
     QJsonDocument jsonDocument = run_json_command( args );
     episodes->setJson( jsonDocument );
-    //ui->episodeTableView->setFocus();
+    ui->episodeTableView->setFocus();
 }
 
 void TVTime::on_tabWidget_currentChanged(int index)
