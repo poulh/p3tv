@@ -22,3 +22,5 @@ HEADERS  += \
 
 FORMS    += \
     p3tv.ui
+
+ICON = p3tv.jpg

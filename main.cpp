@@ -1,10 +1,10 @@
-#include "tvtime.h"
+#include "p3tv.h"
 #include <QApplication>
 
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
-    TVTime w;
+    P3TV w;
     w.show();
 
     return a.exec();

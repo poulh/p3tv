@@ -1,5 +1,5 @@
-#ifndef TVTIME_H
-#define TVTIME_H
+#ifndef P3TV_H
+#define P3TV_H
 
 #include <QMainWindow>
 #include <QStringListModel>
@@ -11,16 +11,16 @@
 #include "qjsontablemodel.h"
 
 namespace Ui {
-class TVTime;
+class P3TV;
 }
 
-class TVTime : public QMainWindow
+class P3TV : public QMainWindow
 {
     Q_OBJECT
 
 public:
-    explicit TVTime(QWidget *parent = 0);
-    ~TVTime();
+    explicit P3TV(QWidget *parent = 0);
+    ~P3TV();
 public slots:
     void beginSearch();
 
@@ -42,6 +42,10 @@ private slots:
     void on_tabWidget_currentChanged(int index);
 
     void refresh_downloads();
+    void on_revertPushButton_clicked();
+
+    void on_savePushButton_clicked();
+
 private:
     QJsonDocument run_json_command( QStringList command );
     void add_series( const QString& id );
@@ -49,9 +53,10 @@ private:
     void load_settings();
     void refresh_series( const QString& seriesid );
     void refresh_episodes( const QString& id );
+    void load_form_data();
+    void save_setting(const QString& setting_key, const QString& setting_value );
 
-
-    Ui::TVTime *ui;
+    Ui::P3TV *ui;
 
     QJsonObject settings;
 
@@ -64,4 +69,4 @@ private:
     QTimer *downloadTimer;
 };
 
-#endif // TVTIME_H
+#endif // P3TV_H

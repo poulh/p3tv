@@ -1,5 +1,5 @@
-#include "tvtime.h"
-#include "ui_tvtime.h"
+#include "p3tv.h"
+#include "ui_p3tv.h"
 
 #include <QDebug>
 #include <QProcess>
@@ -9,9 +9,9 @@
 #include <QSignalMapper>
 #include <QProgressBar>
 
-TVTime::TVTime(QWidget *parent) :
+P3TV::P3TV(QWidget *parent) :
     QMainWindow(parent),
-    ui(new Ui::TVTime)
+    ui(new Ui::P3TV)
 {
     ui->setupUi(this);
 
@@ -104,19 +104,19 @@ TVTime::TVTime(QWidget *parent) :
     refresh_downloads();
 }
 
-TVTime::~TVTime()
+P3TV::~P3TV()
 {
     delete ui;
 }
 
 
-QJsonDocument TVTime::run_json_command( QStringList command )
+QJsonDocument P3TV::run_json_command( QStringList command )
 {
     QApplication::setOverrideCursor(Qt::WaitCursor);
     qDebug() << command;
 
     QProcess process;
-    process.start("/usr/local/bin/tvtime_json_api", command);
+    process.start("/usr/local/bin/p3tv_json_api", command);
 
     process.waitForFinished(-1); // will wait forever until finished
 
@@ -130,7 +130,7 @@ QJsonDocument TVTime::run_json_command( QStringList command )
 };
 
 
-void TVTime::load_settings()
+void P3TV::load_settings()
 {
     QStringList args;
     args << "settings";
@@ -144,9 +144,45 @@ void TVTime::load_settings()
         seriesMap.insert( theSeries["id"].toString() , value );
 
     }
+    load_form_data();
 }
 
-void TVTime::refresh_series(const QString &seriesid )
+void P3TV::load_form_data()
+{
+    ui->downloadPathLineEdit->setText( settings["download_path"].toString() );
+    ui->libraryPathLineEdit->setText( settings["library_path"].toString() );
+
+    ui->transmissionUsernameLineEdit->setText( settings["transmission_username"].toString() );
+    ui->transmissionPasswordLineEdit->setText( settings["transmission_password"].toString() );
+    ui->transmissionHostLineEdit->setText( settings["transmission_host"].toString() );
+    ui->transmissionPortLineEdit->setText( QString::number( settings["transmission_port"].toDouble() ) );
+}
+
+void P3TV::save_setting(const QString& setting_key, const QString& setting_value )
+{
+    if( settings[ setting_key ].toString() != setting_value )
+    {
+        QStringList args;
+        args << "set";
+        args << setting_key;
+        args << setting_value;
+        QJsonDocument jsonDocument = run_json_command( args );
+    }
+}
+
+void P3TV::on_savePushButton_clicked()
+{
+    save_setting( "download_path", ui->downloadPathLineEdit->text() );
+    save_setting( "library_path", ui->libraryPathLineEdit->text() );
+    save_setting( "transmission_username", ui->transmissionUsernameLineEdit->text() );
+    save_setting( "transmission_password", ui->transmissionPasswordLineEdit->text() );
+    save_setting( "transmission_host", ui->transmissionHostLineEdit->text() );
+    save_setting( "transmission_port", ui->transmissionPortLineEdit->text() );
+
+    load_settings();
+}
+
+void P3TV::refresh_series(const QString &seriesid )
 {
     load_settings();
     QJsonArray array = settings["series"].toArray();
@@ -193,7 +229,7 @@ void TVTime::refresh_series(const QString &seriesid )
     }
 }
 
-void TVTime::refresh_downloads()
+void P3TV::refresh_downloads()
 {
     QStringList args;
     args << "catalog_and_downloads";
@@ -260,7 +296,7 @@ void TVTime::refresh_downloads()
 }
 
 
-void TVTime::on_searchButton_clicked()
+void P3TV::on_searchButton_clicked()
 {
     searchResults->removeRows(0,searchResults->rowCount());
     QStringList args;
@@ -273,7 +309,7 @@ void TVTime::on_searchButton_clicked()
     ui->searchLineEdit->selectAll();
 }
 
-void TVTime::on_addSeriesButton_clicked()
+void P3TV::on_addSeriesButton_clicked()
 {
     QModelIndexList list = ui->searchResultsTableView->selectionModel()->selectedIndexes();
     if( list.empty() )
@@ -285,7 +321,7 @@ void TVTime::on_addSeriesButton_clicked()
     on_searchResultsTableView_doubleClicked( index ); //add series and refresh e
 }
 
-void TVTime::add_series( const QString& id )
+void P3TV::add_series( const QString& id )
 {
     QStringList args;
     args << "add_series";
@@ -294,7 +330,7 @@ void TVTime::add_series( const QString& id )
 }
 
 
-void TVTime::on_deleteSeriesButton_clicked()
+void P3TV::on_deleteSeriesButton_clicked()
 {
     QModelIndexList list = ui->seriesTableWidget->selectionModel()->selectedIndexes();
 
@@ -317,7 +353,7 @@ void TVTime::on_deleteSeriesButton_clicked()
     refresh_series( nextSeries["id"].toString() );
 }
 
-void TVTime::on_searchResultsTableView_doubleClicked(const QModelIndex &index)
+void P3TV::on_searchResultsTableView_doubleClicked(const QModelIndex &index)
 {
     QJsonObject object = searchResults->getJsonObject( index );
     QString id = object["id"].toString();
@@ -329,7 +365,7 @@ void TVTime::on_searchResultsTableView_doubleClicked(const QModelIndex &index)
 }
 
 
-void TVTime::on_downloadMissingButton_clicked()
+void P3TV::on_downloadMissingButton_clicked()
 {
     QModelIndexList list = ui->seriesTableWidget->selectionModel()->selectedIndexes();
     if( list.empty() )
@@ -347,7 +383,7 @@ void TVTime::on_downloadMissingButton_clicked()
     refresh_series( id );
 }
 
-void TVTime::download_missing( const QString& id )
+void P3TV::download_missing( const QString& id )
 {
     QStringList args;
     args << "download_missing";
@@ -355,7 +391,7 @@ void TVTime::download_missing( const QString& id )
     QJsonDocument jsonDocument = run_json_command( args );
 }
 
-void TVTime::on_catalogDownloadsButton_clicked()
+void P3TV::on_catalogDownloadsButton_clicked()
 {
     QModelIndexList list = ui->seriesTableWidget->selectionModel()->selectedIndexes();
     if( list.empty() )
@@ -376,7 +412,7 @@ void TVTime::on_catalogDownloadsButton_clicked()
     refresh_series( id );
 }
 
-void TVTime::on_seriesTableWidget_clicked(const QModelIndex &index)
+void P3TV::on_seriesTableWidget_clicked(const QModelIndex &index)
 {
     QJsonArray series = settings["series"].toArray();
     QJsonObject selectedSeries = series[ index.column() ].toObject();
@@ -385,7 +421,7 @@ void TVTime::on_seriesTableWidget_clicked(const QModelIndex &index)
     refresh_episodes( id );
 }
 
-void TVTime::refresh_episodes( const QString& id )
+void P3TV::refresh_episodes( const QString& id )
 {
     QStringList args;
     args << "episode_status";
@@ -396,7 +432,7 @@ void TVTime::refresh_episodes( const QString& id )
     ui->episodeTableView->setFocus();
 }
 
-void TVTime::on_tabWidget_currentChanged(int index)
+void P3TV::on_tabWidget_currentChanged(int index)
 {
     QString tabName = ui->tabWidget->tabText( index );
     if( tabName == "Search" )
@@ -414,8 +450,15 @@ void TVTime::on_tabWidget_currentChanged(int index)
     }
 }
 
-void TVTime::beginSearch()
+void P3TV::beginSearch()
 {
     qDebug() << "begin search";
 }
+
+
+void P3TV::on_revertPushButton_clicked()
+{
+    load_form_data();
+}
+
 
