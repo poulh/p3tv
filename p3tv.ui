@@ -92,16 +92,9 @@
           <item>
            <layout class="QHBoxLayout" name="horizontalLayout_2">
             <item>
-             <widget class="QPushButton" name="catalogDownloadsButton">
+             <widget class="QPushButton" name="deleteSeriesButton">
               <property name="text">
-               <string>Catalog Downloads</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QPushButton" name="downloadMissingButton">
-              <property name="text">
-               <string>Download Missing</string>
+               <string>Delete Series</string>
               </property>
              </widget>
             </item>
@@ -119,9 +112,9 @@
              </spacer>
             </item>
             <item>
-             <widget class="QPushButton" name="deleteSeriesButton">
+             <widget class="QPushButton" name="downloadMissingButton">
               <property name="text">
-               <string>Delete Series</string>
+               <string>Download Missing</string>
               </property>
              </widget>
             </item>

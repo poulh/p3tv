@@ -9,9 +9,16 @@
 #include <QSignalMapper>
 #include <QProgressBar>
 
-P3TV::P3TV(QWidget *parent) :
-    QMainWindow(parent),
-    ui(new Ui::P3TV)
+const int DISABLED = -1;
+
+P3TV::P3TV(QWidget *parent)
+    : QMainWindow(parent)
+    , ui(new Ui::P3TV)
+    , m_bDownloadAvailable( false )
+    , m_bRefreshDownloads( true )
+    , m_bUpdateEpisodeCache( false )
+    , m_iDownloadAvailableIndex( 0 )
+    , m_iUpdateEpisodeCacheIndex( 0 )
 {
     ui->setupUi(this);
 
@@ -54,8 +61,6 @@ P3TV::P3TV(QWidget *parent) :
     }
 
     {
-
-
         ui->downloadsTableWidget->setColumnCount(2);
         ui->downloadsTableWidget->setColumnWidth(0, 68);
         ui->downloadsTableWidget->horizontalHeader()->setVisible(false);
@@ -64,21 +69,39 @@ P3TV::P3TV(QWidget *parent) :
         ui->downloadsTableWidget->setSelectionMode(QAbstractItemView::NoSelection);
     }
 
+    {
+        ui->seriesTableWidget->horizontalHeader()->setVisible(false);
+        ui->seriesTableWidget->verticalHeader()->setVisible(false);
 
+        ui->seriesTableWidget->setRowCount(4);
+        ui->seriesTableWidget->setSelectionBehavior(QAbstractItemView::SelectColumns);
+        // image row
+        ui->seriesTableWidget->setRowHeight(0,200);
+    }
 
+    {
+        downloadsTimer = new QTimer( this );
+        connect( downloadsTimer, SIGNAL( timeout() ), this, SLOT( enable_refresh_downloads() ) );
+        downloadsTimer->start( 10 * 1000 );
+    }
 
-    ui->seriesTableWidget->horizontalHeader()->setVisible(false);
-    ui->seriesTableWidget->verticalHeader()->setVisible(false);
+    {
+        downloadAvailableTimer = new QTimer( this );
+        connect( downloadAvailableTimer, SIGNAL( timeout() ), this, SLOT( enable_download_available() ) );
+        downloadAvailableTimer->start( 60 * 60 * 1000 );
+    }
 
-    ui->seriesTableWidget->setRowCount(4);
-    ui->seriesTableWidget->setSelectionBehavior(QAbstractItemView::SelectColumns);
-    // image row
-    ui->seriesTableWidget->setRowHeight(0,200);
+    {
+        updateEpisodeCacheTimer = new QTimer( this );
+        connect( updateEpisodeCacheTimer, SIGNAL( timeout() ), this, SLOT( enable_update_episode_cache() ) );
+        updateEpisodeCacheTimer->start( 24 * 60 * 60 * 1000 );
+    }
 
-    downloadTimer = new QTimer( this );
-    connect( downloadTimer, SIGNAL( timeout() ), this, SLOT( refresh_downloads() ) );
-    downloadTimer->start(10000);
-
+    {
+        taskTimer = new QTimer( this );
+        connect( taskTimer, SIGNAL( timeout() ), this, SLOT( do_tasks() ) );
+        taskTimer->start( 1000 );
+    }
     //http://stackoverflow.com/questions/10160232/qt-designer-shortcut-to-another-tab
     // Setup a signal mapper to avoid creating custom slots for each tab
     QSignalMapper *m = new QSignalMapper(this);
@@ -101,12 +124,46 @@ P3TV::P3TV(QWidget *parent) :
     connect(m, SIGNAL(mapped(int)), ui->tabWidget, SLOT(setCurrentIndex(int)));
 
     refresh_series( "" );
-    refresh_downloads();
 }
 
 P3TV::~P3TV()
 {
     delete ui;
+}
+
+void P3TV::enable_refresh_downloads()
+{
+    m_bRefreshDownloads = true;
+}
+
+
+void P3TV::enable_download_available()
+{
+    m_iDownloadAvailableIndex = 0;
+}
+
+
+void P3TV::enable_update_episode_cache()
+{
+    m_iUpdateEpisodeCacheIndex = 0;
+}
+
+
+void P3TV::do_tasks()
+{
+    qDebug() << "do_tasks";
+    if( m_bRefreshDownloads )
+    {
+        refresh_downloads();
+    }
+    else if( m_iDownloadAvailableIndex != DISABLED )
+    {
+        download_available();
+    }
+    else if( m_iUpdateEpisodeCacheIndex != DISABLED )
+    {
+        update_episode_cache();
+    }
 }
 
 
@@ -137,8 +194,9 @@ void P3TV::load_settings()
 
     QJsonDocument jsonDocument = run_json_command( args );
     settings = jsonDocument.object();
+    seriesArray = settings["series"].toArray();
 
-    foreach( const QJsonValue& value, settings["series"].toArray() )
+    foreach( const QJsonValue& value, seriesArray )
     {
         QJsonObject theSeries = value.toObject();
         seriesMap.insert( theSeries["id"].toString() , value );
@@ -185,12 +243,10 @@ void P3TV::on_savePushButton_clicked()
 void P3TV::refresh_series(const QString &seriesid )
 {
     load_settings();
-    QJsonArray array = settings["series"].toArray();
 
-
-    ui->seriesTableWidget->setColumnCount( array.size() );
+    ui->seriesTableWidget->setColumnCount( seriesArray.size() );
     uint column = 0;
-    foreach( const QJsonValue& v, array )
+    foreach( const QJsonValue& v, seriesArray )
     {
         QJsonObject theSeries = v.toObject();
 
@@ -198,7 +254,8 @@ void P3TV::refresh_series(const QString &seriesid )
 
         QJsonObject banners = theSeries["banners"].toObject();
         QString posterPath = banners["poster"].toString();
-        QImage img(posterPath); QTableWidgetItem *thumbnail = new QTableWidgetItem;
+        QImage img(posterPath);
+        QTableWidgetItem *thumbnail = new QTableWidgetItem;
         QString title = theSeries["name"].toString();
         thumbnail->setToolTip( title );
         thumbnail->setData(Qt::DecorationRole, QPixmap::fromImage( img ).scaled(136,200) );
@@ -293,8 +350,48 @@ void P3TV::refresh_downloads()
 
         ++row;
     }
+
+    m_bRefreshDownloads = false;
 }
 
+void P3TV::update_episode_cache()
+{
+    if( m_iUpdateEpisodeCacheIndex < seriesArray.size() )
+    {
+        const QJsonObject obj = seriesArray[ m_iUpdateEpisodeCacheIndex ].toObject();
+
+        QString id = obj["id"].toString();
+        qDebug() << m_iUpdateEpisodeCacheIndex << " " << seriesArray.size();
+        QStringList args;
+        args << "update_series";
+        args << id;
+        QJsonDocument jsonDocument = run_json_command( args );
+
+        ++m_iUpdateEpisodeCacheIndex;
+    }
+    if( m_iUpdateEpisodeCacheIndex >= seriesArray.size() )
+    {
+        m_iUpdateEpisodeCacheIndex = DISABLED;
+    }
+}
+
+void P3TV::download_available()
+{
+    if( m_iDownloadAvailableIndex < seriesArray.size() )
+    {
+        const QJsonObject obj = seriesArray[ m_iDownloadAvailableIndex ].toObject();
+
+        QString id = obj["id"].toString();
+        qDebug() << m_iDownloadAvailableIndex << " " << seriesArray.size();
+        download_missing( id );
+
+        ++m_iDownloadAvailableIndex;
+    }
+    if( m_iDownloadAvailableIndex >= seriesArray.size() )
+    {
+        m_iDownloadAvailableIndex = DISABLED;
+    }
+}
 
 void P3TV::on_searchButton_clicked()
 {
@@ -340,8 +437,7 @@ void P3TV::on_deleteSeriesButton_clicked()
     }
 
     QModelIndex index = list[0];
-    QJsonArray series = settings["series"].toArray();
-    QJsonObject selectedSeries = series[ index.column() ].toObject();
+    QJsonObject selectedSeries = seriesArray[ index.column() ].toObject();
     QString id = selectedSeries["id"].toString();
 
     QStringList args;
@@ -349,7 +445,7 @@ void P3TV::on_deleteSeriesButton_clicked()
     args << id;
     QJsonDocument jsonDocument = run_json_command( args );
 
-    QJsonObject nextSeries = series[ std::min( index.column(), series.size() -2 ) ].toObject();
+    QJsonObject nextSeries = seriesArray[ std::min( index.column(), seriesArray.size() -2 ) ].toObject();
     refresh_series( nextSeries["id"].toString() );
 }
 
@@ -374,8 +470,7 @@ void P3TV::on_downloadMissingButton_clicked()
     }
 
     QModelIndex index = list[0];
-    QJsonArray series = settings["series"].toArray();
-    QJsonObject selectedSeries = series[ index.column() ].toObject();
+    QJsonObject selectedSeries = seriesArray[ index.column() ].toObject();
     QString id = selectedSeries["id"].toString();
 
     download_missing( id );
@@ -400,8 +495,7 @@ void P3TV::on_catalogDownloadsButton_clicked()
     }
 
     QModelIndex index = list[0];
-    QJsonArray series = settings["series"].toArray();
-    QJsonObject selectedSeries = series[ index.column() ].toObject();
+    QJsonObject selectedSeries = seriesArray[ index.column() ].toObject();
     QString id = selectedSeries["id"].toString();
 
     QStringList args;
@@ -414,8 +508,7 @@ void P3TV::on_catalogDownloadsButton_clicked()
 
 void P3TV::on_seriesTableWidget_clicked(const QModelIndex &index)
 {
-    QJsonArray series = settings["series"].toArray();
-    QJsonObject selectedSeries = series[ index.column() ].toObject();
+    QJsonObject selectedSeries = seriesArray[ index.column() ].toObject();
     QString id = selectedSeries["id"].toString();
 
     refresh_episodes( id );

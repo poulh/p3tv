@@ -41,7 +41,11 @@ private slots:
 
     void on_tabWidget_currentChanged(int index);
 
-    void refresh_downloads();
+
+    void enable_refresh_downloads();
+    void enable_download_available();
+    void enable_update_episode_cache();
+    void do_tasks();
     void on_revertPushButton_clicked();
 
     void on_savePushButton_clicked();
@@ -56,17 +60,31 @@ private:
     void load_form_data();
     void save_setting(const QString& setting_key, const QString& setting_value );
 
+
+    void refresh_downloads();
+    void download_available();
+    void update_episode_cache();
+
+
     Ui::P3TV *ui;
 
     QJsonObject settings;
+    QJsonObject seriesMap;
+    QJsonArray seriesArray;
 
     QJsonTableModel *searchResults;
 
     QJsonTableModel *episodes;
     QJsonTableModel *downloads;
 
-    QJsonObject seriesMap;
-    QTimer *downloadTimer;
+
+
+    bool m_bRefreshDownloads, m_bDownloadAvailable, m_bUpdateEpisodeCache;
+    int m_iDownloadAvailableIndex, m_iUpdateEpisodeCacheIndex;
+    QTimer *downloadsTimer; // updates download status, catalogs downloaded, clears 100% from transmission
+    QTimer *downloadAvailableTimer; // cycles through series and checks for available episodes
+    QTimer *updateEpisodeCacheTimer; // cycles through series and updates episodes.json cache
+    QTimer *taskTimer;
 };
 
 #endif // P3TV_H
