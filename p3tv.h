@@ -14,6 +14,8 @@ namespace Ui {
 class P3TV;
 }
 
+class WebRunner;
+
 class P3TV : public QMainWindow
 {
     Q_OBJECT
@@ -85,6 +87,8 @@ private:
     QTimer *downloadAvailableTimer; // cycles through series and checks for available episodes
     QTimer *updateEpisodeCacheTimer; // cycles through series and updates episodes.json cache
     QTimer *taskTimer;
+
+    WebRunner *webRunner;
 };
 
 #endif // P3TV_H

@@ -2,12 +2,18 @@
 #include "ui_p3tv.h"
 
 #include <QDebug>
-#include <QProcess>
 #include <QJsonDocument>
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QSignalMapper>
 #include <QProgressBar>
+#include <QNetworkAccessManager>
+#include <QNetworkReply>
+#include <QEventLoop>
+#include <QUrl>
+#include <QUrlQuery>
+
+#include "webrunner.h"
 
 const int DISABLED = -1;
 
@@ -19,8 +25,11 @@ P3TV::P3TV(QWidget *parent)
     , m_bUpdateEpisodeCache( false )
     , m_iDownloadAvailableIndex( 0 )
     , m_iUpdateEpisodeCacheIndex( 0 )
+    , webRunner( new WebRunner( this ) )
 {
     ui->setupUi(this);
+    webRunner->start();
+    QThread::sleep(1);
 
     {
         QJsonTableModel::Header header;
@@ -124,11 +133,21 @@ P3TV::P3TV(QWidget *parent)
     connect(m, SIGNAL(mapped(int)), ui->tabWidget, SLOT(setCurrentIndex(int)));
 
     refresh_series( "" );
+qDebug() << "end construct";
 }
 
 P3TV::~P3TV()
 {
     delete ui;
+
+    taskTimer->stop();
+
+    QStringList args;
+    args << "exit";
+
+    run_json_command( args );
+
+    webRunner->wait();
 }
 
 void P3TV::enable_refresh_downloads()
@@ -151,7 +170,6 @@ void P3TV::enable_update_episode_cache()
 
 void P3TV::do_tasks()
 {
-    qDebug() << "do_tasks";
     if( m_bRefreshDownloads )
     {
         refresh_downloads();
@@ -169,23 +187,43 @@ void P3TV::do_tasks()
 
 QJsonDocument P3TV::run_json_command( QStringList command )
 {
+
     QApplication::setOverrideCursor(Qt::WaitCursor);
     qDebug() << command;
 
-    QProcess process;
-    process.start("/usr/local/bin/p3tv_json_api", command);
+    QNetworkAccessManager NAManager;
+    NAManager.setNetworkAccessible(QNetworkAccessManager::Accessible); // <--
 
-    process.waitForFinished(-1); // will wait forever until finished
 
-    QString stdout = process.readAllStandardOutput();
-    QString stderr = process.readAllStandardError();
-    qDebug() << stdout;
-    qDebug() << stderr;
-    qDebug() << "--------------------";
+    QUrl qurl( "http://0.0.0.0/" + command[0] );
+    QUrlQuery query;
+    if( command.count() > 1 )
+    {
+        query.addQueryItem("key", command[1]);
+    }
+    if( command.count() > 2 )
+    {
+        query.addQueryItem("val", command[2]);
+    }
+    qurl.setPort(4567);
+    qurl.setQuery( query );
+    qDebug() << qurl.toString();
+    QNetworkRequest request( qurl );
+
+    QNetworkReply *reply = NAManager.get( request );
+    QEventLoop eventLoop;
+    QObject::connect(reply, SIGNAL(finished()), &eventLoop, SLOT(quit()));
+    eventLoop.exec();
+    if (reply->error() == QNetworkReply::NoError)
+    {
+        QString json( reply->readAll() );
+        QApplication::restoreOverrideCursor();
+        return QJsonDocument::fromJson( json.toUtf8() );
+    }
+
     QApplication::restoreOverrideCursor();
-    return QJsonDocument::fromJson(stdout.toUtf8());
-};
-
+    return QJsonDocument();
+}
 
 void P3TV::load_settings()
 {

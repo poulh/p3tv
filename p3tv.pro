@@ -4,8 +4,7 @@
 #
 #-------------------------------------------------
 
-QT       += core gui
-
+QT       += core gui network
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
 TARGET = P3TV
@@ -14,11 +13,13 @@ TEMPLATE = app
 
 SOURCES += main.cpp\
     qjsontablemodel.cpp \
-    p3tv.cpp
+    p3tv.cpp \
+    webrunner.cpp
 
 HEADERS  += \
     qjsontablemodel.h \
-    p3tv.h
+    p3tv.h \
+    webrunner.h
 
 FORMS    += \
     p3tv.ui
